@@ -1,9 +1,10 @@
-from token.constants import *
+from compiler.token.constants import *
 from enum import Enum
 import re
+from compiler.utils import CustomQueue, CharArray
 
 
-class TokenType(Enum):
+class TokenType(str, Enum):
     Keyword = "Keyword"
     Delimiter = "Delimiter"
     AttributionOperator = "Attribution Operator"
@@ -16,12 +17,11 @@ class TokenType(Enum):
     Unknown = "Unknown"
 
 
-class Token():
-
+class Token:
     def __init__(self, value, line):
         self.line = line
-        self.type = _set_token_type()
         self.value = value
+        self.type = self._set_token_type()
 
     def _set_token_type(self):
         if self.value in KEYWORD:
@@ -40,32 +40,150 @@ class Token():
             return TokenType.Integer
         elif re.match(REAL_PATTERN, self.value):
             return TokenType.Real
-        elif re.match(INDENTIFIER_PATTERN, self.value):
+        elif re.match(IDENTIFIER_PATTERN, self.value):
             return TokenType.Identifier
         else:
             return TokenType.Unknown
+
+    def to_list(self):
+        return [self.value, self.type, self.line]
 
     def __str__(self):
         return f"{self.value},{self.type},{self.line}"
 
 
-class TokenParser():
+class TokenParser:
+    _single_char_symbols = SYMBOL.copy()
+    _single_char_symbols.remove(">")
+    _single_char_symbols.remove(":")
+    _single_char_symbols.remove("<")
+    _multiple_char_symbols_mapping = {":": ["="], ">": ["="], "<": ["=", ">"]}
+
     def __init__(self, code_lines):
         self.token_list = []
         self.code_lines = code_lines
-        self.current_line = 0
+        self.current_line_counter = 0
+        self.current_token = CharArray()
+        self.current_line_queue = CustomQueue()
+        self.in_comment = False
+        self.errors = []
 
-    def _add_token(self, token):
-        self.token_list.append(token)
+    def _add_token(self):
+        self.token_list.append(
+            Token(self.current_token.to_string(), self.current_line_counter).to_list()
+        )
+        self.current_token.clear()
+
+    def _take_action_whitespace(self, character):
+        if character == "\n":
+            self.current_line_counter += 1
+
+    def _take_action_comment(self):
+        if self.in_comment:
+            self.in_comment = False
+        else:
+            self.in_comment = True
+
+    def _take_action_word(self):
+        character = self.current_token.content[0]
+
+        while re.match(r"[a-zA-Z0-9_]", character):
+            character = self.current_line_queue.get()
+            if re.match(r"[a-zA-Z0-9_]", character):
+                self.current_token.append(character)
+            else:
+                self.current_line_queue.reinsert(character)
+
+    def _take_action_number(self, is_real=False):
+        character = self.current_token.content[0]
+
+        while re.match(INTEGER_PATTERN, character):
+            character = self.current_line_queue.get()
+            if re.match(INTEGER_PATTERN, character):
+                self.current_token.append(character)
+
+        if is_real:
+            self.current_line_queue.reinsert(character)
+        else:
+            if character == "." and re.match(
+                INTEGER_PATTERN, self.current_line_queue.peek()
+            ):
+                self.current_token.append(character)
+                self._take_action_number(True)
+            else:
+                self.current_line_queue.reinsert(character)
+
+    def _take_action_symbol(self, character):
+        if character in self._single_char_symbols:
+            self._add_token()
+        else:
+            next_character = self.current_line_queue.get()
+            if (
+                self._multiple_char_symbols_mapping.get(character)
+                and next_character in self._multiple_char_symbols_mapping[character]
+            ):
+                self.current_token.append(next_character)
+                self._add_token()
+            else:
+                self.current_line_queue.reinsert(next_character)
 
     def parse(self):
         """
         For each line of code, parse the line getting the tokens
         """
-        for lines in self.code_lines:
-            current_position = 0
-            while lines[current_position] != '\n':
-                # TODO implement parsing logic
-                current_position += 1
+        for line in self.code_lines:
+            self.current_line_queue.clear()
 
-            self.current_line += 1
+            # Populate queue
+            for character in line:
+                self.current_line_queue.put(character)
+
+            while not self.current_line_queue.empty():
+                character = self.current_line_queue.get()
+
+                if self.in_comment and (character != "}"):
+                    if character == "\n":
+                        self.current_line_counter += 1
+
+                    continue
+                else:
+                    if character == "{" or character == "}":
+                        if self.current_token.length:
+                            self._add_token()
+                        self._take_action_comment()
+
+                    elif character in WHITESPACE:
+                        if self.current_token.length:
+                            self._add_token()
+                        self._take_action_whitespace(character)
+
+                    elif re.search(r"[a-zA-Z]", character):
+                        self.current_token.append(character)
+                        self._take_action_word()
+
+                    elif re.search(r"[0-9]", character):
+                        self.current_token.append(character)
+                        self._take_action_number()
+
+                    elif character in SYMBOL:
+                        if self.current_token.length:
+                            self._add_token()
+                        self.current_token.append(character)
+                        self._take_action_symbol(character)
+                    else:
+                        if self.current_token.length:
+                            self._add_token()
+                        self.current_token.append(character)
+                        self._add_token()
+                        self.errors.append(
+                            f"Unknown token f{character} at line {self.current_line_counter}."
+                        )
+
+        if self.in_comment:
+            self.errors.append("Unfinished comment section")
+
+    def get_errors(self):
+        return self.errors
+
+    def get_token_list(self):
+        return self.token_list
