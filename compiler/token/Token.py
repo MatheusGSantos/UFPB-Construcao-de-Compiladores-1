@@ -14,18 +14,27 @@ class TokenType(str, Enum):
     Identifier = "Identifier"
     Integer = "Integer"
     Real = "Real"
+    Boolean = "Boolean"
+    Type = "Type"
     Unknown = "Unknown"
 
 
 class Token:
-    def __init__(self, value, line):
+    def __init__(self, value, line, type=None):
         self.line = line
         self.value = value
-        self.type = self._set_token_type()
+        if type:
+            self.type = type
+        else:
+            self.type = self._set_token_type()
 
     def _set_token_type(self):
         if self.value in KEYWORD:
             return TokenType.Keyword
+        elif self.value in VAR_TYPES:
+            return TokenType.Type
+        elif self.value in BOOLEANS:
+            return TokenType.Boolean
         elif self.value in DELIMITER:
             return TokenType.Delimiter
         elif self.value in ATTRIBUTION:
@@ -176,7 +185,7 @@ class TokenParser:
                         self.current_token.append(character)
                         self._add_token()
                         self.errors.append(
-                            f"Unknown token f{character} at line {self.current_line_counter}."
+                            f"Unknown token '{character}' at line {self.current_line_counter}."
                         )
 
         if self.in_comment:

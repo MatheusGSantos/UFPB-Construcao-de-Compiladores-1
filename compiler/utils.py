@@ -1,6 +1,16 @@
 class CustomQueue:
-    def __init__(self):
-        self.queue = []
+    def __init__(self, src_list=None):
+        """
+
+        :type src_list: list
+        """
+        if src_list:
+            if isinstance(src_list, list):
+                self.queue = src_list
+            else:
+                raise Exception('Invalid argument type: src_list')
+        else:
+            self.queue = []
 
     def get(self):
         element = self.queue[0]
@@ -65,3 +75,10 @@ class CharArray:
 
     def __str__(self):
         return self.content.__str__()
+
+
+class ColoredText:
+    WARNING = '\033[91m'
+    NORMAL = '\033[0m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'

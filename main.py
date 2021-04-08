@@ -1,8 +1,13 @@
 import sys
-from compiler.lexico import Lexico
+from compiler.lexical import Lexical
+from compiler.syntactic import Syntactic
 
 if __name__ == "__main__":
-	# test_file = sys.argv[1]
-	test_file = "test1.pas"
-	lexico = Lexico(test_file)
-	lexico.run()
+	if len(sys.argv) > 1:
+		test_file = sys.argv[1]
+	else:
+		test_file = "test4.pas"
+	lexical = Lexical(test_file)
+	lexical.run()
+	syntactic = Syntactic(test_file)
+	syntactic.run()
