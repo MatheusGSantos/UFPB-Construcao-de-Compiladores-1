@@ -21,6 +21,7 @@ class SyntacticTree:
         self.current_token = None
         self.current_line = 0
         self.identifier_not_found = False
+        self.subprogram_dec_not_found = False
 
     def set_token_queue(self, src_list):
         if isinstance(src_list, list):
@@ -124,12 +125,59 @@ class SyntacticTree:
 
     def more_subprograms_declarations(self):
         self.subprogram_declaration()
+        if self.subprogram_dec_not_found():
+            self.subprogram_dec_not_found = False
+            if self.current_token:
+                self.reinsert()
+            return
+
         if self.get_next_token() and self.current_token.value == ';':
             self.more_subprograms_declarations()
+        else:
+            raise Exception(f"Expected ';' after subprogram declaration at line {self.current_line - 1}")
 
     def subprogram_declaration(self):
+        if self.get_next_token() and self.current_token.value == 'procedure':
+            if self.get_next_token() and self.current_token.value == 'id':
+                self.arguments()
+                    if self.get_next_token() and self.current_token.value == ';':
+                        self.variable_declarations()
+                        self.subprograms_declarations()
+                        self.composite_command()
+
+    def arguments(self):
+        if self.get_next_token() and self.current_token.value == '(':
+            self.parameter_list()
+            if not self.get_next_token() or self.current_token.value != ')':
+                raise Exception(f"Expected ')' after parameter list at line {self.current_line - 1}")
+        else:
+            self.reinsert()
+            
+    def parameter_list(self):
+        self.identifier_list()
+        if self.identifier_not_found():
+            self.identifier_not_found = False
+            raise Exception(f"Expected identifier after '(' at line {self.current_line - 1}")
+
+        if self.get_next_token() and self.current_token.value == ':':
+            self.type()
+            self.more_parameters()
+        else:
+            raise Exception(f"Expected ':' after identifier at line {self.current_line - 1}")
+
+    def more_parameters(self):
         if self.get_next_token() and self.current_token.value == ';':
-            pass
+            self.identifier_list()
+            if self.identifier_not_found:
+                raise Exception(f"Expected identifier after ; at line {self.current_line - 1}")
+
+            if self.get_next_token() and self.current_token.value == ":":
+                self.type()
+                self.more_parameters()
+            else:
+                raise Exception(f"Expected ':' after identifier at line {self.current_line - 1}")
+        else:
+            self.reinsert()
 
     # base
     def composite_command(self):
