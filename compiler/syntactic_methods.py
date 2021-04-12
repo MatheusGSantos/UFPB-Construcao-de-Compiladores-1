@@ -294,51 +294,96 @@ class SyntacticTree:
             self.variable_not_found = True
 
 
-    def procedure_activation(self):
+    def procedure_activation(self):   # ok
         if self.get_next_token() and self.current_token.type == TokenType.Identifier:
             self.procedure_continuation()
         else:
             self.procedure_activation_not_found = True
 
-    def procedure_continuation(self):
+    def procedure_continuation(self):   # ok
         if self.get_next_token() and self.current_token.value == '(':
             self.expression_list()
             if not self.get_next_token() or self.current_token.value != ')':
-                raise Exception(f"Expected ) after expression list at line {self.current_line - 1}")
+                raise Exception(f"Expected ')' after expression list at line {self.current_line - 1}")
 
         else:
             self.reinsert()
 
-    def expression_list(self):
+    def expression_list(self):    # ok
         self.expression()
         self.more_expressions()
 
-    def more_expressions(self):
+    def more_expressions(self):   # ok
         if self.get_next_token() and self.current_token.value == ',':
-            self.expression_list()
+            self.expression()
             self.more_expressions()
 
-    def expression(self):
-        pass
+    def expression(self):   # ok
+        self.simple_expression()
+        self.expression_continuation()
 
-    def expression_continuation(self):
-        pass
+    def expression_continuation(self):    # ok
+        if self.get_next_token() and self.current_token.type == TokenType.RelationalOperator:
+            self.simple_expression()
+        else:
+            self.reinsert()
 
-    def simple_expression(self):
-        pass
+    def simple_expression(self):    # ok
+        if self.get_next_token() and self.current_token.value in ['+','-']:
+            self.term()
+            self.more_simple_expressions()
+            return
 
-    def more_simple_expressions(self):
-        pass
+        self.reinsert()
+        self.term()
+        self.more_simple_expressions()
+        
 
-    def term(self):
-        pass
+    def more_simple_expressions(self):    # ok
+        if self.get_next_token() and self.current_token.type == TokenType.AdditiveOperator:
+            self.term()
+            self.more_simple_expressions()
+        else:
+            self.reinsert()
 
-    def more_terms(self):
-        pass
+    def term(self):   # ok
+        self.factor()
+        self.more_terms()
+
+    def more_terms(self):   # ok
+        if self.get_next_token() and self.current_token.type == TokenType.MultiplicativeOperator:
+            self.factor()
+            self.more_terms()
+        else:
+            self.reinsert()
 
     def factor(self):
-        pass
+        isTokenPresent = self.get_next_token()
+        if not isTokenPresent:
+            raise Exception(f"Expected factor at line {self.current_line - 1}")
+        
+        if self.current_token.value == "not":
+            self.factor()
+            return
+        
+        if self.current_token.value == "(":
+            self.expression()
+            if not self.get_next_token() or self.current_token.value != ')':
+                raise Exception(f"Expected ')' after expression at line {self.current_line - 1}")
+            return
 
+        if self.current_token.type == TokenType.Identifier:
+            self.factor_continuation()
+            return
+        
+        if self.current_token.type not in [TokenType.Integer, TokenType.RealNumber, TokenType.Boolean]:
+            raise Exception(f"Expected factor at line {self.current_line - 1}")
+        
     def factor_continuation(self):
-        pass
+        if self.get_next_token() and self.current_token.value == '(':
+            self.expression_list()
+            if not self.get_next_token() or self.current_token.value != ')':
+                raise Exception(f"Expected ')' the end of expression list at line {self.current_line - 1}")
+        else:
+            self.reinsert()
     
