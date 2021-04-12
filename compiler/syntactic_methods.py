@@ -43,8 +43,8 @@ class SyntacticTree:
             return False
 
     def reinsert(self):
-      if self.current_token:
-          self.token_queue.reinsert(self.current_token)
+        if self.current_token:
+            self.token_queue.reinsert(self.current_token)
 
     def parse(self):
         if self.get_next_token():
@@ -167,7 +167,7 @@ class SyntacticTree:
             
     def parameter_list(self):    # ok
         self.identifier_list()
-        if self.identifier_not_found():
+        if self.identifier_not_found:
             raise Exception(f"Expected identifier after '(' at line {self.current_line - 1}")
 
         if self.get_next_token() and self.current_token.value == ':':
@@ -208,20 +208,20 @@ class SyntacticTree:
 
     def command_list(self):     # ok
         self.command()
-        if self.command_not_found():
+        if self.command_not_found:
             self.command_not_found = False
             self.command_list_not_found = True
             return
         self.more_commands()
 
     def command(self):    # ok
-        isTokenPresent = self.get_next_token()
-        if not isTokenPresent:
+        is_token_present = self.get_next_token()
+        if not is_token_present:
             self.command_not_found = True
             return
         
         if self.current_token.value == "if":
-            #caminho 'if expr then command else_part'
+            # path 'if expr then command else_part'
             self.expression()
             if self.get_next_token() and self.current_token.value == "then":
                 self.command()
@@ -233,7 +233,7 @@ class SyntacticTree:
                 raise Exception(f"Expected 'then' after expression at line {self.current_line - 1}")
 
         elif self.current_token.value == "while":
-            #caminho 'while expr do command'
+            # path 'while expr do command'
             self.expression()
             if self.get_next_token() and self.current_token.value == "do":
                 self.command()
@@ -250,7 +250,7 @@ class SyntacticTree:
             self.variable_not_found = False
             self.reinsert()
         else:
-            #caminho 'var := expr'
+            # path 'var := expr'
             if self.get_next_token() and self.current_token.type == TokenType.AttributionOperator:
                 self.expression()
                 return
@@ -293,7 +293,6 @@ class SyntacticTree:
         if not self.get_next_token() or self.current_token.type != TokenType.Identifier:
             self.variable_not_found = True
 
-
     def procedure_activation(self):   # ok
         if self.get_next_token() and self.current_token.type == TokenType.Identifier:
             self.procedure_continuation()
@@ -329,7 +328,7 @@ class SyntacticTree:
             self.reinsert()
 
     def simple_expression(self):    # ok
-        if self.get_next_token() and self.current_token.value in ['+','-']:
+        if self.get_next_token() and self.current_token.value in ['+', '-']:
             self.term()
             self.more_simple_expressions()
             return
@@ -337,7 +336,6 @@ class SyntacticTree:
         self.reinsert()
         self.term()
         self.more_simple_expressions()
-        
 
     def more_simple_expressions(self):    # ok
         if self.get_next_token() and self.current_token.type == TokenType.AdditiveOperator:
@@ -358,8 +356,8 @@ class SyntacticTree:
             self.reinsert()
 
     def factor(self):
-        isTokenPresent = self.get_next_token()
-        if not isTokenPresent:
+        is_token_present = self.get_next_token()
+        if not is_token_present:
             raise Exception(f"Expected factor at line {self.current_line - 1}")
         
         if self.current_token.value == "not":
@@ -386,4 +384,3 @@ class SyntacticTree:
                 raise Exception(f"Expected ')' the end of expression list at line {self.current_line - 1}")
         else:
             self.reinsert()
-    
