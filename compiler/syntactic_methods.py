@@ -24,6 +24,8 @@ class SyntacticTree:
         self.subprogram_dec_not_found = False
         self.command_list_not_found = False
         self.command_not_found = False
+        self.variable_not_found = False
+        self.procedure_activation_not_found = False
 
     def set_token_queue(self, src_list):
         if isinstance(src_list, list):
@@ -37,10 +39,12 @@ class SyntacticTree:
             self.current_line = int(self.current_token.line)
             return True
         else:
+            self.current_token = None
             return False
 
     def reinsert(self):
-        self.token_queue.reinsert(self.current_token)
+      if self.current_token:
+          self.token_queue.reinsert(self.current_token)
 
     def parse(self):
         if self.get_next_token():
@@ -51,8 +55,8 @@ class SyntacticTree:
             if self.get_next_token() and self.current_token.type == TokenType.Identifier:
                 if self.get_next_token() and self.current_token.value == ";":
                     self.variable_declarations()
-                    # self.subprograms_declarations()
-                    # self.composite_command()
+                    self.subprograms_declarations()
+                    self.composite_command()
                     if not self.get_next_token() or self.current_token.value != '.':
                         raise Exception("Expected '.' at the end of program.")
                 else:
@@ -103,7 +107,7 @@ class SyntacticTree:
             raise Exception(f"Expected ':' after identifier at line {self.current_line - 1}")
 
     def type(self):    # ok
-        if not self.get_next_token() or self.current_token.type != TokenType.Type:
+        if not self.get_next_token() or self.current_token.type != TokenType.TypeIdentifier:
             raise Exception(f"Expected a type at line {self.current_line - 1}")
 
     def identifier_list(self):    # ok
@@ -111,6 +115,7 @@ class SyntacticTree:
             self.more_identifiers()
         else:
             self.identifier_not_found = True
+            self.reinsert()
 
     def more_identifiers(self):    # ok
         if self.get_next_token() and self.current_token.value == ',':
@@ -122,15 +127,13 @@ class SyntacticTree:
             self.reinsert()
 
     # base
-    def subprograms_declarations(self):
+    def subprograms_declarations(self):    # ok
         self.more_subprograms_declarations()
 
-    def more_subprograms_declarations(self):
+    def more_subprograms_declarations(self):    # ok
         self.subprogram_declaration()
-        if self.subprogram_dec_not_found():
+        if self.subprogram_dec_not_found:
             self.subprogram_dec_not_found = False
-            if self.current_token:
-                self.reinsert()
             return
 
         if self.get_next_token() and self.current_token.value == ';':
@@ -138,16 +141,23 @@ class SyntacticTree:
         else:
             raise Exception(f"Expected ';' after subprogram declaration at line {self.current_line - 1}")
 
-    def subprogram_declaration(self):
+    def subprogram_declaration(self):    # ok
         if self.get_next_token() and self.current_token.value == 'procedure':
-            if self.get_next_token() and self.current_token.value == 'id':
+            if self.get_next_token() and self.current_token.type == TokenType.Identifier:
                 self.arguments()
-                    if self.get_next_token() and self.current_token.value == ';':
-                        self.variable_declarations()
-                        self.subprograms_declarations()
-                        self.composite_command()
+                if self.get_next_token() and self.current_token.value == ';':
+                    self.variable_declarations()
+                    self.subprograms_declarations()
+                    self.composite_command()
+                else:
+                    raise Exception(f"Expected ';' at the end of procedure declaration at line {self.current_line - 1}")  
+            else:
+                raise Exception(f"Expected identifier after 'procedure' at line {self.current_line - 1}")
+        else:
+            self.subprogram_dec_not_found = True
+            self.reinsert()
 
-    def arguments(self):
+    def arguments(self):    # ok
         if self.get_next_token() and self.current_token.value == '(':
             self.parameter_list()
             if not self.get_next_token() or self.current_token.value != ')':
@@ -155,10 +165,9 @@ class SyntacticTree:
         else:
             self.reinsert()
             
-    def parameter_list(self):
+    def parameter_list(self):    # ok
         self.identifier_list()
         if self.identifier_not_found():
-            self.identifier_not_found = False
             raise Exception(f"Expected identifier after '(' at line {self.current_line - 1}")
 
         if self.get_next_token() and self.current_token.value == ':':
@@ -167,7 +176,7 @@ class SyntacticTree:
         else:
             raise Exception(f"Expected ':' after identifier at line {self.current_line - 1}")
 
-    def more_parameters(self):
+    def more_parameters(self):    # ok
         if self.get_next_token() and self.current_token.value == ';':
             self.identifier_list()
             if self.identifier_not_found:
@@ -182,21 +191,22 @@ class SyntacticTree:
             self.reinsert()
 
     # base
-    def composite_command(self):
+    def composite_command(self):    # ok
         if self.get_next_token() and self.current_token.value == 'begin':
             self.optional_commands()
             if not self.get_next_token() or self.current_token.value != 'end':
                 raise Exception(f"Expected 'end' at line {self.current_line - 1}")
         else:
+            self.reinsert()
             raise Exception(f"Expected 'begin' at line {self.current_line - 1}")
     
-    def optional_commands(self):
+    def optional_commands(self):    # ok
         self.command_list()
         if self.command_list_not_found:
             self.command_list_not_found = False
             return
 
-    def command_list(self):
+    def command_list(self):     # ok
         self.command()
         if self.command_not_found():
             self.command_not_found = False
@@ -204,21 +214,13 @@ class SyntacticTree:
             return
         self.more_commands()
 
-    def command(self):
+    def command(self):    # ok
         isTokenPresent = self.get_next_token()
         if not isTokenPresent:
             self.command_not_found = True
             return
         
-        if self.current_token.type == TokenType.Identifier:
-            #caminho 'var := expr'
-            if self.get_next_token() and self.current_token.type == TokenType.AttributionOperator:
-                self.expression()
-                return
-            else:
-                raise Exception(f"Expected ':=' at line {self.current_line - 1}")
-
-        elif self.current_token.value == "if":
+        if self.current_token.value == "if":
             #caminho 'if expr then command else_part'
             self.expression()
             if self.get_next_token() and self.current_token.value == "then":
@@ -241,27 +243,80 @@ class SyntacticTree:
             else:
                 raise Exception(f"Expected 'do' after expression at line {self.current_line - 1}")
 
+        self.reinsert()
+
+        self.variable()
+        if self.variable_not_found:
+            self.variable_not_found = False
+            self.reinsert()
+        else:
+            #caminho 'var := expr'
+            if self.get_next_token() and self.current_token.type == TokenType.AttributionOperator:
+                self.expression()
+                return
+            else:
+                raise Exception(f"Expected ':=' at line {self.current_line - 1}")
+
         # test procedure_activation
+        self.procedure_activation()
+
+        if self.procedure_activation_not_found:
+            self.procedure_activation_not_found = False
+            self.reinsert()
+        else:
+            return
 
         # test composite_command
+        try:
+            self.composite_command()
+        except Exception:
+            self.command_not_found = True
 
-    def more_commands(self):
-        pass
+    def more_commands(self):    # ok
+        if self.get_next_token() and self.current_token.value == ';':
+            self.command()
+            if self.command_not_found:
+                raise Exception(f"Expected command after ';' at line {self.current_line - 1}")
+            self.more_commands()
+        else:
+            self.reinsert()
 
-    def else_part(self):
-        pass
+    def else_part(self):    # ok
+        if self.get_next_token() and self.current_token.value == 'else':
+            self.command()
+            if self.command_not_found:
+                raise Exception(f"Expected command after 'else' at line {self.current_line - 1}")
+        else:
+            self.reinsert()
+
+    def variable(self):   # ok
+        if not self.get_next_token() or self.current_token.type != TokenType.Identifier:
+            self.variable_not_found = True
+
 
     def procedure_activation(self):
-        pass
+        if self.get_next_token() and self.current_token.type == TokenType.Identifier:
+            self.procedure_continuation()
+        else:
+            self.procedure_activation_not_found = True
 
     def procedure_continuation(self):
-        pass
+        if self.get_next_token() and self.current_token.value == '(':
+            self.expression_list()
+            if not self.get_next_token() or self.current_token.value != ')':
+                raise Exception(f"Expected ) after expression list at line {self.current_line - 1}")
+
+        else:
+            self.reinsert()
 
     def expression_list(self):
-        pass
+        self.expression()
+        self.more_expressions()
 
     def more_expressions(self):
-        pass
+        if self.get_next_token() and self.current_token.value == ',':
+            self.expression_list()
+            self.more_expressions()
 
     def expression(self):
         pass
