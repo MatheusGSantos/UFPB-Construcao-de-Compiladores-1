@@ -22,6 +22,8 @@ class SyntacticTree:
         self.current_line = 0
         self.identifier_not_found = False
         self.subprogram_dec_not_found = False
+        self.command_list_not_found = False
+        self.command_not_found = False
 
     def set_token_queue(self, src_list):
         if isinstance(src_list, list):
@@ -182,6 +184,106 @@ class SyntacticTree:
     # base
     def composite_command(self):
         if self.get_next_token() and self.current_token.value == 'begin':
-            # self.optional_comments()
+            self.optional_commands()
             if not self.get_next_token() or self.current_token.value != 'end':
-                raise Exception(f"Expected 'end' at {self.current_line - 1}")
+                raise Exception(f"Expected 'end' at line {self.current_line - 1}")
+        else:
+            raise Exception(f"Expected 'begin' at line {self.current_line - 1}")
+    
+    def optional_commands(self):
+        self.command_list()
+        if self.command_list_not_found:
+            self.command_list_not_found = False
+            return
+
+    def command_list(self):
+        self.command()
+        if self.command_not_found():
+            self.command_not_found = False
+            self.command_list_not_found = True
+            return
+        self.more_commands()
+
+    def command(self):
+        isTokenPresent = self.get_next_token()
+        if not isTokenPresent:
+            self.command_not_found = True
+            return
+        
+        if self.current_token.type == TokenType.Identifier:
+            #caminho 'var := expr'
+            if self.get_next_token() and self.current_token.type == TokenType.AttributionOperator:
+                self.expression()
+                return
+            else:
+                raise Exception(f"Expected ':=' at line {self.current_line - 1}")
+
+        elif self.current_token.value == "if":
+            #caminho 'if expr then command else_part'
+            self.expression()
+            if self.get_next_token() and self.current_token.value == "then":
+                self.command()
+                if self.command_not_found:
+                    raise Exception(f"Expected command after 'then' at line {self.current_line - 1}")
+                self.else_part()
+                return
+            else:
+                raise Exception(f"Expected 'then' after expression at line {self.current_line - 1}")
+
+        elif self.current_token.value == "while":
+            #caminho 'while expr do command'
+            self.expression()
+            if self.get_next_token() and self.current_token.value == "do":
+                self.command()
+                if self.command_not_found:
+                    raise Exception(f"Expected command after 'do' at line {self.current_line - 1}")
+                return
+            else:
+                raise Exception(f"Expected 'do' after expression at line {self.current_line - 1}")
+
+        # test procedure_activation
+
+        # test composite_command
+
+    def more_commands(self):
+        pass
+
+    def else_part(self):
+        pass
+
+    def procedure_activation(self):
+        pass
+
+    def procedure_continuation(self):
+        pass
+
+    def expression_list(self):
+        pass
+
+    def more_expressions(self):
+        pass
+
+    def expression(self):
+        pass
+
+    def expression_continuation(self):
+        pass
+
+    def simple_expression(self):
+        pass
+
+    def more_simple_expressions(self):
+        pass
+
+    def term(self):
+        pass
+
+    def more_terms(self):
+        pass
+
+    def factor(self):
+        pass
+
+    def factor_continuation(self):
+        pass
+    

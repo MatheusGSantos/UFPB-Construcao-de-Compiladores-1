@@ -13,9 +13,9 @@ class TokenType(str, Enum):
     MultiplicativeOperator = "Multiplicative Operator"
     Identifier = "Identifier"
     Integer = "Integer"
-    Real = "Real"
+    RealNumber = "Real"
     Boolean = "Boolean"
-    Type = "Type"
+    TypeIdentifier = "Type"
     Unknown = "Unknown"
 
 
@@ -32,7 +32,7 @@ class Token:
         if self.value in KEYWORD:
             return TokenType.Keyword
         elif self.value in VAR_TYPES:
-            return TokenType.Type
+            return TokenType.TypeIdentifier
         elif self.value in BOOLEANS:
             return TokenType.Boolean
         elif self.value in DELIMITER:
@@ -48,7 +48,7 @@ class Token:
         elif re.match(INTEGER_PATTERN, self.value):
             return TokenType.Integer
         elif re.match(REAL_PATTERN, self.value):
-            return TokenType.Real
+            return TokenType.RealNumber
         elif re.match(IDENTIFIER_PATTERN, self.value):
             return TokenType.Identifier
         else:
