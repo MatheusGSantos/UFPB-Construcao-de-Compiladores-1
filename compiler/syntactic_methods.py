@@ -1,5 +1,6 @@
 from compiler.utils import CustomQueue
 from compiler.token.Token import TokenType
+from compiler.semantic import SemanticAnalyzer
 
 
 class SyntacticTree:
@@ -26,6 +27,7 @@ class SyntacticTree:
         self.command_not_found = False
         self.variable_not_found = False
         self.procedure_activation_not_found = False
+        self.semantic_analyzer = SemanticAnalyzer()
 
     def set_token_queue(self, src_list):
         if isinstance(src_list, list):
@@ -93,8 +95,8 @@ class SyntacticTree:
 
         if self.identifier_not_found:
             self.identifier_not_found = False
-            if self.current_token:
-                self.reinsert()
+            # if self.current_token:
+            #     self.reinsert()
             return
 
         if self.get_next_token() and self.current_token.value == ':':
