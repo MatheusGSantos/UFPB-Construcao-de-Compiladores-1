@@ -54,7 +54,11 @@ class SyntacticTree:
 
     def program(self):
         if self.current_token.value == 'program':
+            self.semantic_analyzer.scope_Stack.new_scope()  # new scope
+
             if self.get_next_token() and self.current_token.type == TokenType.Identifier:
+                self.semantic_analyzer.scope_Stack.push(self.current_token.value)  # add identifier to scope stack
+
                 if self.get_next_token() and self.current_token.value == ";":
                     self.variable_declarations()
                     self.subprograms_declarations()
@@ -68,14 +72,13 @@ class SyntacticTree:
         else:
             raise Exception(f"Expected 'program' at line {self.current_line - 1}")
 
-    # base
     def variable_declarations(self):    # ok
         if self.get_next_token() and self.current_token.value == 'var':
             self.variable_declarations_list()
         else:
             self.reinsert()
 
-    def variable_declarations_list(self):    # ok
+    def variable_declarations_list(self):
         self.identifier_list()
 
         if self.identifier_not_found:
@@ -112,27 +115,34 @@ class SyntacticTree:
         if not self.get_next_token() or self.current_token.type != TokenType.TypeIdentifier:
             raise Exception(f"Expected a type at line {self.current_line - 1}")
 
-    def identifier_list(self):    # ok
+    def identifier_list(self):
         if self.get_next_token() and self.current_token.type == TokenType.Identifier:
+            try:
+                self.semantic_analyzer.check_aux_and_take_action(self.current_token.value)
+            except Exception as err:
+                raise err
             self.more_identifiers()
         else:
             self.identifier_not_found = True
             self.reinsert()
 
-    def more_identifiers(self):    # ok
+    def more_identifiers(self):
         if self.get_next_token() and self.current_token.value == ',':
             if self.get_next_token() and self.current_token.type == TokenType.Identifier:
+                try:
+                    self.semantic_analyzer.check_aux_and_take_action(self.current_token.value)
+                except Exception as err:
+                    raise err
                 self.more_identifiers()
             else:
                 raise Exception(f"Expected identifier after ',' at line {self.current_line - 1}")
         else:
             self.reinsert()
 
-    # base
-    def subprograms_declarations(self):    # ok
+    def subprograms_declarations(self):
         self.more_subprograms_declarations()
 
-    def more_subprograms_declarations(self):    # ok
+    def more_subprograms_declarations(self):
         self.subprogram_declaration()
         if self.subprogram_dec_not_found:
             self.subprogram_dec_not_found = False
@@ -143,9 +153,15 @@ class SyntacticTree:
         else:
             raise Exception(f"Expected ';' after subprogram declaration at line {self.current_line - 1}")
 
-    def subprogram_declaration(self):    # ok
+    def subprogram_declaration(self):
         if self.get_next_token() and self.current_token.value == 'procedure':
             if self.get_next_token() and self.current_token.type == TokenType.Identifier:
+                try:
+                    self.semantic_analyzer.check_aux_and_take_action(self.current_token.value)
+                except Exception as err:
+                    raise err
+                self.semantic_analyzer.scope_Stack.new_scope()
+
                 self.arguments()
                 if self.get_next_token() and self.current_token.value == ';':
                     self.variable_declarations()
@@ -159,7 +175,7 @@ class SyntacticTree:
             self.subprogram_dec_not_found = True
             self.reinsert()
 
-    def arguments(self):    # ok
+    def arguments(self):
         if self.get_next_token() and self.current_token.value == '(':
             self.parameter_list()
             if not self.get_next_token() or self.current_token.value != ')':
@@ -167,7 +183,7 @@ class SyntacticTree:
         else:
             self.reinsert()
             
-    def parameter_list(self):    # ok
+    def parameter_list(self):
         self.identifier_list()
         if self.identifier_not_found:
             raise Exception(f"Expected identifier after '(' at line {self.current_line - 1}")
@@ -178,7 +194,7 @@ class SyntacticTree:
         else:
             raise Exception(f"Expected ':' after identifier at line {self.current_line - 1}")
 
-    def more_parameters(self):    # ok
+    def more_parameters(self):
         if self.get_next_token() and self.current_token.value == ';':
             self.identifier_list()
             if self.identifier_not_found:
@@ -192,23 +208,30 @@ class SyntacticTree:
         else:
             self.reinsert()
 
-    # base
-    def composite_command(self):    # ok
+    def composite_command(self):
         if self.get_next_token() and self.current_token.value == 'begin':
+            self.semantic_analyzer.scope_aux += 1
             self.optional_commands()
             if not self.get_next_token() or self.current_token.value != 'end':
                 raise Exception(f"Expected 'end' at line {self.current_line - 1}")
+
+            self.semantic_analyzer.scope_aux -= 1
+            if not self.semantic_analyzer.scope_aux:
+                try:
+                    self.semantic_analyzer.scope_Stack.close_scope()
+                except Exception as err:
+                    raise err
         else:
             self.reinsert()
             raise Exception(f"Expected 'begin' at line {self.current_line - 1}")
     
-    def optional_commands(self):    # ok
+    def optional_commands(self):
         self.command_list()
         if self.command_list_not_found:
             self.command_list_not_found = False
             return
 
-    def command_list(self):     # ok
+    def command_list(self):
         self.command()
         if self.command_not_found:
             self.command_not_found = False
@@ -216,12 +239,12 @@ class SyntacticTree:
             return
         self.more_commands()
 
-    def command(self):    # ok
+    def command(self):
         is_token_present = self.get_next_token()
         if not is_token_present:
             self.command_not_found = True
             return
-        
+
         if self.current_token.value == "if":
             # path 'if expr then command else_part'
             self.expression()
@@ -274,7 +297,7 @@ class SyntacticTree:
         except Exception:
             self.command_not_found = True
 
-    def more_commands(self):    # ok
+    def more_commands(self):
         if self.get_next_token() and self.current_token.value == ';':
             self.command()
             if self.command_not_found:
@@ -283,7 +306,7 @@ class SyntacticTree:
         else:
             self.reinsert()
 
-    def else_part(self):    # ok
+    def else_part(self):
         if self.get_next_token() and self.current_token.value == 'else':
             self.command()
             if self.command_not_found:
@@ -294,14 +317,24 @@ class SyntacticTree:
     def variable(self):   # ok
         if not self.get_next_token() or self.current_token.type != TokenType.Identifier:
             self.variable_not_found = True
+            return
 
-    def procedure_activation(self):   # ok
+        try:
+            self.semantic_analyzer.check_aux_and_take_action(self.current_token.value)
+        except Exception as err:
+            raise err
+
+    def procedure_activation(self):
         if self.get_next_token() and self.current_token.type == TokenType.Identifier:
+            try:
+                self.semantic_analyzer.check_aux_and_take_action(self.current_token.value)
+            except Exception as err:
+                raise err
             self.procedure_continuation()
         else:
             self.procedure_activation_not_found = True
 
-    def procedure_continuation(self):   # ok
+    def procedure_continuation(self):
         if self.get_next_token() and self.current_token.value == '(':
             self.expression_list()
             if not self.get_next_token() or self.current_token.value != ')':
@@ -310,26 +343,26 @@ class SyntacticTree:
         else:
             self.reinsert()
 
-    def expression_list(self):    # ok
+    def expression_list(self):
         self.expression()
         self.more_expressions()
 
-    def more_expressions(self):   # ok
+    def more_expressions(self):
         if self.get_next_token() and self.current_token.value == ',':
             self.expression()
             self.more_expressions()
 
-    def expression(self):   # ok
+    def expression(self):
         self.simple_expression()
         self.expression_continuation()
 
-    def expression_continuation(self):    # ok
+    def expression_continuation(self):
         if self.get_next_token() and self.current_token.type == TokenType.RelationalOperator:
             self.simple_expression()
         else:
             self.reinsert()
 
-    def simple_expression(self):    # ok
+    def simple_expression(self):
         if self.get_next_token() and self.current_token.value in ['+', '-']:
             self.term()
             self.more_simple_expressions()
@@ -339,18 +372,18 @@ class SyntacticTree:
         self.term()
         self.more_simple_expressions()
 
-    def more_simple_expressions(self):    # ok
+    def more_simple_expressions(self):
         if self.get_next_token() and self.current_token.type == TokenType.AdditiveOperator:
             self.term()
             self.more_simple_expressions()
         else:
             self.reinsert()
 
-    def term(self):   # ok
+    def term(self):
         self.factor()
         self.more_terms()
 
-    def more_terms(self):   # ok
+    def more_terms(self):
         if self.get_next_token() and self.current_token.type == TokenType.MultiplicativeOperator:
             self.factor()
             self.more_terms()
@@ -373,6 +406,10 @@ class SyntacticTree:
             return
 
         if self.current_token.type == TokenType.Identifier:
+            try:
+                self.semantic_analyzer.check_aux_and_take_action(self.current_token.value)
+            except Exception as err:
+                raise err
             self.factor_continuation()
             return
         

@@ -4,4 +4,5 @@ var
 	valor2: real;
 begin
 	valor1 := 10;
+	valor3 := 10;
 end.

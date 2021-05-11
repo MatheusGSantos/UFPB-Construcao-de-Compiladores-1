@@ -83,17 +83,18 @@ class ScopeStack:
         self.length = 0
         self.scope_mark = scope_mark
 
-    def push(self, element):
+    def push(self, new_identifier):
         """
-        Push 'element' into stack if 'element' is not already declared in the current scope
+        Push 'new_identifier' into stack if 'new_identifier' is not already declared in the current scope
 
-        Raise exception if 'element' is already declared in the current scope
+        Raise exception if 'new_identifier' is already declared in the current scope
+        :type new_identifier: str
         """
-        if not self.length or not self.in_scope(element):
-            self.stack.append(element)
+        if not self.length or not self.in_scope(new_identifier):
+            self.stack.append(new_identifier)
             self.length += 1
         else:
-            raise Exception(f"Token '{element}' already declared in current scope.")
+            raise Exception(f"Token '{new_identifier}' already declared in current scope.")
 
     def pop(self):
         """
@@ -123,24 +124,41 @@ class ScopeStack:
 
         raise Exception(f"Stack base is not '{self.scope_mark}'. Couldn't close the current scope")
 
-    def in_scope(self, element):
-        """
-        Checks if 'element' is declared in the scope stack. Return True if it is, False otherwise
-
-        Raise exception if stack base is not a scope mark
-        """
+    def in_scope(self, identifier):
         if self.length:
             for i in range(self.length, 0, -1):
-                if self.stack[i - 1] == element:
+                if self.stack[i - 1] == self.scope_mark:
+                    break
+
+                if self.stack[i - 1] == identifier:
                     return True
 
             if self.stack[0] == self.scope_mark:
                 return False
             else:
                 raise Exception(
-                    f"Reached stack base. Couldn't find {element} in the current scope because there's no scope")
+                    f"Reached stack base. Couldn't find {identifier} in the current scope because there's no scope")
 
-        raise Exception(f"Empty stack. Couldn't find {element} in the current scope because there's no scope")
+        raise Exception(f"Empty stack. Couldn't find {identifier} in the current scope because there's no scope")
+
+    def in_stack(self, identifier):
+        """
+        Checks if 'identifier_value' is declared in the scope stack. Return True if it is, False otherwise
+
+        Raise exception if stack base is not a scope mark
+        """
+        if self.length:
+            for i in range(self.length, 0, -1):
+                if self.stack[i - 1] == identifier:
+                    return True
+
+            if self.stack[0] == self.scope_mark:
+                return False
+            else:
+                raise Exception(
+                    f"Reached stack base. Couldn't find {identifier} in the current scope because there's no scope")
+
+        raise Exception(f"Empty stack. Couldn't find {identifier} in the current scope because there's no scope")
 
 
 class ColoredText:
