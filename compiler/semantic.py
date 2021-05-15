@@ -1,10 +1,11 @@
-from compiler.utils import ScopeStack
+from compiler.utils import ScopeStack, TCS
 
 
 class SemanticAnalyzer:
     def __init__(self):
         self.scope_Stack = ScopeStack()
         self.scope_aux = 0
+        self.TCS = TCS()
 
     def check_aux_and_take_action(self, identifier):
         if not self.scope_aux:

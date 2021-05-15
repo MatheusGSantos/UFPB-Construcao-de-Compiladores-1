@@ -58,6 +58,7 @@ class SyntacticTree:
 
             if self.get_next_token() and self.current_token.type == TokenType.Identifier:
                 self.semantic_analyzer.scope_Stack.push(self.current_token.value)  # add identifier to scope stack
+                self.semantic_analyzer.scope_Stack.populate_types("program")  # init program id
 
                 if self.get_next_token() and self.current_token.value == ";":
                     self.variable_declarations()
@@ -114,6 +115,7 @@ class SyntacticTree:
     def type(self):    # ok
         if not self.get_next_token() or self.current_token.type != TokenType.TypeIdentifier:
             raise Exception(f"Expected a type at line {self.current_line - 1}")
+        self.semantic_analyzer.scope_Stack.populate_types(self.current_token.value)
 
     def identifier_list(self):
         if self.get_next_token() and self.current_token.type == TokenType.Identifier:
@@ -160,6 +162,7 @@ class SyntacticTree:
                     self.semantic_analyzer.check_aux_and_take_action(self.current_token.value)
                 except Exception as err:
                     raise err
+                self.semantic_analyzer.scope_Stack.populate_types("procedure")  # init procedure id
                 self.semantic_analyzer.scope_Stack.new_scope()
 
                 self.arguments()
@@ -358,12 +361,13 @@ class SyntacticTree:
 
     def expression_continuation(self):
         if self.get_next_token() and self.current_token.type == TokenType.RelationalOperator:
+
             self.simple_expression()
         else:
             self.reinsert()
 
     def simple_expression(self):
-        if self.get_next_token() and self.current_token.value in ['+', '-']:
+        if self.get_next_token() and self.current_token.value in ['+', '-']:    # signal
             self.term()
             self.more_simple_expressions()
             return
@@ -374,6 +378,7 @@ class SyntacticTree:
 
     def more_simple_expressions(self):
         if self.get_next_token() and self.current_token.type == TokenType.AdditiveOperator:
+            self.semantic_analyzer.TCS.expr_append(element=self.current_token.value, member_type="operation")  # add to expression
             self.term()
             self.more_simple_expressions()
         else:
@@ -385,6 +390,7 @@ class SyntacticTree:
 
     def more_terms(self):
         if self.get_next_token() and self.current_token.type == TokenType.MultiplicativeOperator:
+            self.semantic_analyzer.TCS.expr_append(element=self.current_token.value, member_type="operation")  # add to expression
             self.factor()
             self.more_terms()
         else:
@@ -396,13 +402,16 @@ class SyntacticTree:
             raise Exception(f"Expected factor at line {self.current_line - 1}")
         
         if self.current_token.value == "not":
+            self.semantic_analyzer.TCS.expr_append(element=self.current_token.value, member_type="operation")  # add to expression
             self.factor()
             return
         
         if self.current_token.value == "(":
+            self.semantic_analyzer.TCS.expr_append(element=self.current_token.value, member_type="parentesis")  # add to expression
             self.expression()
             if not self.get_next_token() or self.current_token.value != ')':
                 raise Exception(f"Expected ')' after expression at line {self.current_line - 1}")
+            self.semantic_analyzer.TCS.expr_append(element=self.current_token.value, member_type="parentesis")  # add to expression
             return
 
         if self.current_token.type == TokenType.Identifier:
@@ -410,16 +419,27 @@ class SyntacticTree:
                 self.semantic_analyzer.check_aux_and_take_action(self.current_token.value)
             except Exception as err:
                 raise err
+
+            self.semantic_analyzer.TCS.expr_append(element=self.semantic_analyzer.scope_Stack.get_type(self.current_token.value), member_type="term")  # add to expression
             self.factor_continuation()
             return
-        
+
         if self.current_token.type not in [TokenType.Integer, TokenType.RealNumber, TokenType.Boolean]:
             raise Exception(f"Expected factor at line {self.current_line - 1}")
-        
+
+        self.semantic_analyzer.TCS.expr_append(
+            element={TokenType.Integer: "integer",
+                     TokenType.RealNumber: "real",
+                     TokenType.Boolean: "boolean"
+                     }[self.current_token.type],
+            member_type="term")  # add to expression
+
     def factor_continuation(self):
         if self.get_next_token() and self.current_token.value == '(':
+            self.semantic_analyzer.TCS.expr_append(element=self.current_token.value, member_type="parentesis")  # add to expression
             self.expression_list()
             if not self.get_next_token() or self.current_token.value != ')':
                 raise Exception(f"Expected ')' the end of expression list at line {self.current_line - 1}")
+            self.semantic_analyzer.TCS.expr_append(element=self.current_token.value, member_type="parentesis")  # add to expression
         else:
             self.reinsert()
