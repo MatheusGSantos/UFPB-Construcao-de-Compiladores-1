@@ -251,6 +251,7 @@ class SyntacticTree:
         if self.current_token.value == "if":
             # path 'if expr then command else_part'
             self.expression()
+            self.semantic_analyzer.TCS.expression_parse()
             if self.get_next_token() and self.current_token.value == "then":
                 self.command()
                 if self.command_not_found:
@@ -263,6 +264,7 @@ class SyntacticTree:
         elif self.current_token.value == "while":
             # path 'while expr do command'
             self.expression()
+            self.semantic_analyzer.TCS.expression_parse()
             if self.get_next_token() and self.current_token.value == "do":
                 self.command()
                 if self.command_not_found:
@@ -278,9 +280,14 @@ class SyntacticTree:
             self.variable_not_found = False
             self.reinsert()
         else:
+            self.semantic_analyzer.TCS.expr_append(element=self.semantic_analyzer.scope_Stack.get_type(self.current_token.value),
+                                                   member_type="term")  # add to expression
             # path 'var := expr'
             if self.get_next_token() and self.current_token.type == TokenType.AttributionOperator:
+                self.semantic_analyzer.TCS.expr_append(element=self.current_token.value,
+                                                       member_type="operation")  # add to expression
                 self.expression()
+                self.semantic_analyzer.TCS.expression_parse()
                 return
             else:
                 raise Exception(f"Expected ':=' at line {self.current_line - 1}")
@@ -348,11 +355,13 @@ class SyntacticTree:
 
     def expression_list(self):
         self.expression()
+        self.semantic_analyzer.TCS.expression_parse()
         self.more_expressions()
 
     def more_expressions(self):
         if self.get_next_token() and self.current_token.value == ',':
             self.expression()
+            self.semantic_analyzer.TCS.expression_parse()
             self.more_expressions()
 
     def expression(self):
@@ -361,7 +370,8 @@ class SyntacticTree:
 
     def expression_continuation(self):
         if self.get_next_token() and self.current_token.type == TokenType.RelationalOperator:
-
+            self.semantic_analyzer.TCS.expr_append(element=self.current_token.value,
+                                                   member_type="operation")  # add to expression
             self.simple_expression()
         else:
             self.reinsert()

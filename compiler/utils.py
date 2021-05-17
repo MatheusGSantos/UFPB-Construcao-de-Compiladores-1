@@ -246,11 +246,11 @@ class TCS:
                 self.current_parentesis_counter += 1
                 self.expr_pop(i)
                 i -= 1
-            elif self.elem.value == ')':
+            elif elem.value == ')':
                 self.current_parentesis_counter -= 1
                 self.expr_pop(i)
                 i -= 1
-            elif self.elem.member_type == 'operation':
+            elif elem.member_type == 'operation':
                 self.define_priority_and_push(i)
             i += 1
 
@@ -275,6 +275,8 @@ class TCS:
                 for elem in self.priority_array:    # decrease pos by 2 if pos > current_op pos
                     if elem[2] > current_operation[2]:
                         elem[2] -= 2
+
+        self.current_expression = []
 
     def define_priority_and_push(self, position):
         if self.current_expression[position].value in self.arithmetic_operators:

@@ -22,8 +22,8 @@ class Syntactic:
                 token_list.append(Token(info[0], info[2][:-1], info[1]))
 
             syntactic_tree = SyntacticTree(token_list)
-            syntactic_tree.parse()
             try:
+                syntactic_tree.parse()
                 print(f"{colored.GREEN}RESULT:{colored.NORMAL} Finished running syntactic/semantic analyzer "
                       f"successfully on "
                       f"file: {self.file_path}")
