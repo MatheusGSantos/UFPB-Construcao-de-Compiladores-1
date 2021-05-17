@@ -1,5 +1,6 @@
 from compiler.token.constants import RELATIONAL
 
+
 class CustomQueue:
     def __init__(self, src_list=None):
         """
@@ -241,16 +242,16 @@ class TCS:
 
     def expression_parse(self):
         i = 0
-        for elem in self.current_expression:
-            if elem.value == '(':
+        while i < len(self.current_expression):
+            if self.current_expression[i].value == '(':
                 self.current_parentesis_counter += 1
                 self.expr_pop(i)
                 i -= 1
-            elif elem.value == ')':
+            elif self.current_expression[i].value == ')':
                 self.current_parentesis_counter -= 1
                 self.expr_pop(i)
                 i -= 1
-            elif elem.member_type == 'operation':
+            elif self.current_expression[i].member_type == 'operation':
                 self.define_priority_and_push(i)
             i += 1
 

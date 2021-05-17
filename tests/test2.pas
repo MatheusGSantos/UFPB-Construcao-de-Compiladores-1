@@ -7,7 +7,8 @@ var
    S,X: real;
 begin
    S := A + B * X
-end; {verifique se é necessário um ";" no fechamento de um procedimento}
+end;
+
 
 begin
    while (I <= 5) do

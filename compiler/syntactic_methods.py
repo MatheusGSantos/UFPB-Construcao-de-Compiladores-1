@@ -435,7 +435,7 @@ class SyntacticTree:
             return
 
         if self.current_token.type not in [TokenType.Integer, TokenType.RealNumber, TokenType.Boolean]:
-            raise Exception(f"Expected factor at line {self.current_line - 1}")
+            raise Exception(f"Expected factor at line {self.current_line - 1}. Got {self.current_token.value}.")
 
         self.semantic_analyzer.TCS.expr_append(
             element={TokenType.Integer: "integer",
