@@ -135,6 +135,8 @@ class TokenParser:
                 self._add_token()
             else:
                 self.current_line_queue.reinsert(next_character)
+                if next_character not in WHITESPACE:
+                    self._add_token()
 
     def parse(self):
         """

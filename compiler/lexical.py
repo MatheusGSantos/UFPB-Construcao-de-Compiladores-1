@@ -27,7 +27,7 @@ class Lexical:
                     print(f"{colored.WARNING}ERROR: {err}{colored.NORMAL}")
                 print(f"{colored.CYAN}TASK:{colored.NORMAL} Dumping output to: {self.output_path}")
                 token_list = token_parser.get_token_list()
-                writer = csv.writer(f_out, delimiter=',')
+                writer = csv.writer(f_out, delimiter='\t')
                 writer.writerow(["Token", "Class", "Line"])
                 writer.writerows(token_list)
                 print(f"{colored.GREEN}RESULT:{colored.NORMAL} Dumped output to: {self.output_path}")

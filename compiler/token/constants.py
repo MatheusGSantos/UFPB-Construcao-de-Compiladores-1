@@ -1,8 +1,6 @@
 KEYWORD = [
     "program",
     "var",
-    "real",
-    "boolean",
     "procedure",
     "begin",
     "end",

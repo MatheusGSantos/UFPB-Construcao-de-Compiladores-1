@@ -1,0 +1,13 @@
+priorities = {
+        "+": 3,
+        "-": 3,
+        "*": 4,
+        "/": 4,
+        "rel": 2,
+        "log": 1
+    }
+
+expressão = []     // lista de elementos da expressão
+                   // cada elemento da expressão tem: valor(integer, boolean, real, +, -, ...) e member_type(operation, parentesis, term)
+parentesis_counter = 0
+operation_priority_list = []    // cada elemento é uma lista com [ prioridade, valor da op(ex.: +, -, or), pos(posição no array de exp) ]
